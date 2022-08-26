@@ -2,6 +2,7 @@ import ray.rllib.algorithms.ppo as ppo
 from timeit import default_timer as timer
 import numpy as np
 import json
+import math
 import ray
 import os
 from lib2to3.pgen2.token import NUMBER
@@ -41,6 +42,13 @@ def cleanDict(dictionary):
     for key, value in zip(dictionary.keys(), dictionary.values()):
         dictionary[key] = cleanValue(value)
     return dictionary
+
+def timeString(time):
+  seconds_elapsed = math.floor(time)
+  minutes_elapsed = math.floor(seconds_elapsed/60)
+  hours_elapsed = math.floor(minutes_elapsed/60)
+  days_elapsed = math.floor(hours_elapsed/24)
+  return f'{days_elapsed} days  {(hours_elapsed%24):02} hours  {(minutes_elapsed%60):02} mins  {(seconds_elapsed%60):02} seconds'
 
 
 logging.captureWarnings(False)
@@ -114,12 +122,9 @@ for epoch in range(1, NUMBER_OF_EPOCHS+1):
     result = algorithm.train()
     os.system('clear')
     
-    seconds_running = round(running_time%60)
-    minutes_running = round(running_time/60)
-    hours_running = round(minutes_running/60)
-    days_running = round(hours_running/24)
+
     print("\n------------------------------------------------------------------")
-    print(f"finished epoch: {epoch} | running time: {round(days_running)}days {round(hours_running%24)} hrs {round(minutes_running%60)} min {round(running_time%60)}s | average completion: {round(average_time,2)}s")
+    print(f"finished epoch: {epoch} | {timeString(running_time)} | average completion: {round(average_time,2)}s")
     current = timer()
     min_reward = result["episode_reward_min"]
     max_reward = result["episode_reward_max"]
@@ -128,15 +133,12 @@ for epoch in range(1, NUMBER_OF_EPOCHS+1):
     print(f'Mean Reward: {mean_reward}\n Min: {min_reward} Max: {max_reward}')
     print(f'completed in {round(current - interim)} seconds')
 
-    time_remaining = (NUMBER_OF_EPOCHS - epoch)*average_time
-    
-    seconds_remaining = time_remaining%60
-    minutes_remaining = round(time_remaining/60)
-    hours_remaining = round(minutes_remaining/24)
-    days_remaining = round(hours_remaining/24)
+    time_remaining = (NUMBER_OF_EPOCHS+1 - epoch)*average_time
+
     print(
-        f'Estimated Time Remaining: {round(days_remaining)} days {round(hours_remaining % 24)} hours {round(minutes_remaining % 60)} min {round(seconds_remaining)}s')
+        f'Estimated Time Remaining: {timeString(time_remaining)}')
     print("------------------------------------------------------------------")
+    
     if epoch % 10 == 0:
         checkpoint = algorithm.save(checkpoint_root)
         with open(f'{checkpoint}/result.json', 'w') as fp:

@@ -1,3 +1,5 @@
+import logging
+logging.captureWarnings(True)
 import ray.rllib.algorithms.ppo as ppo
 from timeit import default_timer as timer
 import numpy as np
@@ -6,8 +8,10 @@ import ray
 import math
 import os
 from lib2to3.pgen2.token import NUMBER
-import logging
-logging.captureWarnings(True)
+
+
+logging.captureWarnings(False)
+
 
 
 def cleanValue(value):
@@ -50,7 +54,7 @@ def timeString(time):
   days_elapsed = math.floor(hours_elapsed/24)
   return f'{days_elapsed} days  {(hours_elapsed%24):02} hours  {(minutes_elapsed%60):02} mins  {(seconds_elapsed%60):02} seconds'
 
-logging.captureWarnings(False)
+
 
 print("Starting Ray instance")
 ray.init(ignore_reinit_error=True,
@@ -61,10 +65,11 @@ ENV = "LunarLander-v2"
 VERSION = "ppo_v1"
 TRAINER = ppo
 DEFAULT_CONFIG = TRAINER.DEFAULT_CONFIG.copy()
-NUMBER_OF_EPOCHS = 5
+NUMBER_OF_EPOCHS = 500
 
-LAST_CHECKPOINT = 500
-EVAL_INTERVAL = 1
+LAST_CHECKPOINT = None
+SAVE_INTERVAL = 100
+EVAL_INTERVAL = 10
 
 checkpoint_root = f'.checkpoints/{ENV}/{VERSION}'
 
@@ -73,7 +78,6 @@ config = TRAINER.PPO.merge_trainer_configs(DEFAULT_CONFIG, {
     'env_config': {
         'continuous': True,
     },
-    # 'record_env': True,
     'framework': 'tf',
     'lambda': 0.95,
     'kl_coeff': 0.5,
@@ -105,15 +109,15 @@ print(f'Checkpoints Stored at {checkpoint_root}')
 
 print("Starting Trainer")
 algorithm = TRAINER.PPO(config=config)
-logging.captureWarnings(False)
 print("Trainer Started")
 
 
 if LAST_CHECKPOINT:
     print(f"Loading Checkpoint {LAST_CHECKPOINT}")
     checkpoint_file = f'{checkpoint_root}/checkpoint_{LAST_CHECKPOINT:06}/checkpoint-{LAST_CHECKPOINT}'
-    algorithm.restore(checkpoint_file)
-
+    checkpoint = algorithm.restore(checkpoint_file)
+else:
+   checkpoint = algorithm.save(checkpoint_root)
 
 start = timer()
 
@@ -124,35 +128,39 @@ for epoch in range(1, NUMBER_OF_EPOCHS+1):
     average_time = running_time/(epoch+1)
 
     result = algorithm.train()
+    
     os.system('clear')
-
-
-    print("\n------------------------------------------------------------------")
-    print(f"finished epoch: {epoch} | {timeString(running_time)} | average completion: {round(average_time,2)}s")
     current = timer()
     min_reward = result["episode_reward_min"]
     max_reward = result["episode_reward_max"]
     mean_reward = result["episode_reward_mean"]
-
-    print(f'Mean Reward: {mean_reward}\n Min: {min_reward} Max: {max_reward}')
-    print(f'completed in {round(current - interim)} seconds')
-
     time_remaining = (NUMBER_OF_EPOCHS+1 - epoch)*average_time
 
+    print("------------------------------------------------------------------")
+    print(f'Running Time: {timeString(running_time)} \naverage completion: {round(average_time,2)}s')
     print(
         f'Estimated Time Remaining: {timeString(time_remaining)}')
     print("------------------------------------------------------------------")
-    if epoch % 10 == 0:
-        
-        checkpoint = algorithm.save(checkpoint_root)
-        with open(f'{checkpoint}/result.json', 'w') as fp:
-            json.dump(cleanDict(result), fp,  indent=4)
+    print(f'finished epoch: {epoch} in {round(current - interim,2)} seconds')   
+    print(f'Mean Reward: {mean_reward}\n Min: {min_reward} Max: {max_reward}')
+    print("------------------------------------------------------------------")
+    
+    
+    
+    if SAVE_INTERVAL:
+        if epoch % SAVE_INTERVAL == 0:  
+            checkpoint = algorithm.save(checkpoint_root)
+            with open(f'{checkpoint}/result.json', 'w') as fp:
+                json.dump(cleanDict(result), fp,  indent=4)
         
     
     if EVAL_INTERVAL:
         if epoch % EVAL_INTERVAL == 0:
             eval = algorithm.evaluate()
-            with open(f'{checkpoint}/eval.json', 'w') as fp:
+            checkpoint = ((LAST_CHECKPOINT if LAST_CHECKPOINT else 0) + epoch)
+            checkpoint_dir = f'./{checkpoint_root}/checkpoint_{checkpoint:06}'
+            os.makedirs(checkpoint_dir, exist_ok=True)
+            with open(f'{checkpoint_dir}/eval.json', 'w') as fp:
                 json.dump(cleanDict(eval), fp,  indent=4)
                 
 ray.shutdown()

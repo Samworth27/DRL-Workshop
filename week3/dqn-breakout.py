@@ -57,12 +57,14 @@ ray.init(ignore_reinit_error=True,
         #  logging_level=logging.FATAL, log_to_driver=False
          )
 
-ENV = "BreakoutNoFrameskip-v4"
+ENV = "BreakoutDeterministic-v4"
 VERSION = "dqn_v4"
 TRAINER = dqn
-NUMBER_OF_EPOCHS = 100000
+NUMBER_OF_EPOCHS = 500
 
-LAST_CHECKPOINT = 0
+LAST_CHECKPOINT = None
+SAVE_INTERVAL = 50
+EVAL_INTERVAL = None
 
 checkpoint_root = f'.checkpoints/{ENV}/{VERSION}'
 
@@ -72,10 +74,10 @@ config['env'] = ENV
 config['framework'] = 'tf'
 # config['env_config']['render_mode'] = "human"
 config["num_gpus"] = 1
-config["num_workers"] = 12
+config["num_workers"] = 16
 config["num_cpus_per_worker"] = 0.5
 config['target_network_update_freq'] = 8000
-config['replay_buffer_config']['capacity'] = 35000
+config['replay_buffer_config']['capacity'] = 30000
 config['log_level'] = "ERROR"
 config['n_step'] = 1
 config['lr'] =  .0000625
@@ -84,8 +86,11 @@ config['hiddens'] = [512]
 config['rollout_fragment_length'] = 4
 config['train_batch_size'] = 32
 config['exploration_config']['epsilon_timesteps'] = 2000000
-config['exploration_config']['final_epsilon'] = 0.3
+config['exploration_config']['final_epsilon'] = 0.01
 config['min_sample_timesteps_per_iteration'] = 10000
+config["evaluation_num_workers"] = 1
+config["evaluation_config"]["render_env"] = True
+config["evaluation_config"]["render_mode"] = 'human'
 
 print(f'Checkpoints Stored at {checkpoint_root}')
 
@@ -128,9 +133,21 @@ for epoch in range(1, NUMBER_OF_EPOCHS+1):
     print(
         f'Estimated Time Remaining: {timeString(time_remaining)}')
     print("------------------------------------------------------------------")
-    if epoch % 10 == 0:
-        checkpoint = algorithm.save(checkpoint_root)
-        with open(f'{checkpoint}/result.json', 'w') as fp:
-            json.dump(cleanDict(result), fp,  indent=4)
+    if SAVE_INTERVAL:
+        if epoch % SAVE_INTERVAL == 0:  
+            checkpoint = algorithm.save(checkpoint_root)
+            with open(f'{checkpoint}/result.json', 'w') as fp:
+                json.dump(cleanDict(result), fp,  indent=4)
+        
+    
+    if EVAL_INTERVAL:
+        if epoch % EVAL_INTERVAL == 0:
+            eval = algorithm.evaluate()
+            checkpoint = ((LAST_CHECKPOINT if LAST_CHECKPOINT else 0) + epoch)
+            checkpoint_dir = f'./{checkpoint_root}/checkpoint_{checkpoint:06}'
+            os.makedirs(checkpoint_dir, exist_ok=True)
+            with open(f'{checkpoint_dir}/eval.json', 'w') as fp:
+                json.dump(cleanDict(eval), fp,  indent=4)
+                
 
 ray.shutdown()

@@ -50,7 +50,7 @@ config = TRAINER.merge_trainer_configs( DEFAULT_CONFIG, {
 })
 last_checkpoint = 173
 evaluate = True
-experiment_name = 'v1'
+experiment_name = 'v2'
 chkpt_root = f'.checkpoints/{ENV}/{experiment_name}'
 evaluate = False
 epochs = 90

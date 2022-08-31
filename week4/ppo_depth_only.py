@@ -2,6 +2,7 @@ import ray.rllib.algorithms.ppo as ppo
 
 from modules.Train import runTraining
 import ray
+from os import getcwd
 
 from offworld_gym.envs.common.channels import Channels
 
@@ -23,7 +24,7 @@ RESULTS_INTERVAL = 1
 SAVE_INTERVAL = 2
 EVAL_INTERVAL = None
 
-checkpoint_root = f'.checkpoints/{ENV}/{VERSION}'
+checkpoint_root = f'{getcwd()}/.checkpoints/{ENV}/{VERSION}'
 
 config = TRAINER.PPO.merge_trainer_configs(DEFAULT_CONFIG, {
     'env': ENV,

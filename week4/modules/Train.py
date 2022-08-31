@@ -1,7 +1,7 @@
 import json
 import os
 from timeit import default_timer as timer
-from Helpers import timeString, cleanDict
+from modules.Helpers import timeString, cleanDict
 
 def runTraining(algorithm, num_epochs, checkpoint_root, last_checkpoint = None, save_interval=None, results_interval=None, eval_interval=None ):
 

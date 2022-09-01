@@ -51,18 +51,19 @@ def runTraining(algorithm, num_epochs, checkpoint_root, last_checkpoint = None, 
             if epoch % results_interval == 0:
                 # checkpoint = ((LAST_CHECKPOINT if LAST_CHECKPOINT else 0) + epoch)
                 checkpoint = epoch
-                checkpoint_dir = f'./{checkpoint_root}/checkpoint_{checkpoint:06}'
+                checkpoint_dir = f'{checkpoint_root}/checkpoint_{checkpoint:06}'
+                print(f'Results saved to: {checkpoint_dir}')
                 os.makedirs(checkpoint_dir, exist_ok=True)
                 with open(f'{checkpoint_dir}/result.json', 'w') as fp:
                     json.dump(cleanDict(result, type(algorithm.config)), fp,  indent=4)
             
-            
+           
         if eval_interval:
             if epoch % eval_interval == 0:
                 eval = algorithm.evaluate()
                 # checkpoint = ((LAST_CHECKPOINT if LAST_CHECKPOINT else 0) + epoch)
                 checkpoint = epoch
-                checkpoint_dir = f'./{checkpoint_root}/checkpoint_{checkpoint:06}'
+                checkpoint_dir = f'{checkpoint_root}/checkpoint_{checkpoint:06}'
                 os.makedirs(checkpoint_dir, exist_ok=True)
                 with open(f'{checkpoint_dir}/eval.json', 'w') as fp:
                     json.dump(cleanDict(result, type(algorithm.config)), fp,  indent=4)

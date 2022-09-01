@@ -1,10 +1,33 @@
-import ray.rllib.algorithms.ppo as ppo
+LAST_CHECKPOINT = None
+NUMBER_OF_EPOCHS = 200
 
-from modules.Train import runTraining
-import ray
+RESULTS_INTERVAL = 1
+SAVE_INTERVAL = 2
+EVAL_INTERVAL = None
+
+ENV = 'CustomOffWorldDiscreteEnv-v0'
+VERSION = "depth_only_v2"
+
+
+
+
+
 from os import getcwd
 
+import gym
+import offworld_gym
+import ray
+
 from offworld_gym.envs.common.channels import Channels
+from modules.Environment import CustomOffWorldDiscreteEnv
+from modules.Train import runTraining
+from modules.Evaluate import runEvaluation
+
+
+import ray.rllib.algorithms.ppo as ppo
+TRAINER = ppo
+DEFAULT_CONFIG = TRAINER.DEFAULT_CONFIG.copy()
+
 
 print("Starting Ray instance")
 ray.init(
@@ -12,17 +35,6 @@ ray.init(
     # _temp_dir = "./ray_results"
     #  logging_level=logging.FATAL, log_to_driver=False
 )
-
-ENV = "CustomOffWorldDockerMonolithDiscreteSim-v0"
-VERSION = "depth_only_v2"
-TRAINER = ppo
-DEFAULT_CONFIG = TRAINER.DEFAULT_CONFIG.copy()
-NUMBER_OF_EPOCHS = 100
-
-LAST_CHECKPOINT = 38
-RESULTS_INTERVAL = 1
-SAVE_INTERVAL = 2
-EVAL_INTERVAL = None
 
 checkpoint_root = f'{getcwd()}/.checkpoints/{ENV}/{VERSION}'
 
@@ -49,23 +61,17 @@ config = TRAINER.PPO.merge_trainer_configs(DEFAULT_CONFIG, {
     'model': {
         'vf_share_layers': 'true'
     },
-    # 'hiddens': [256,256],
     'num_gpus': 1,
-    "evaluation_num_workers": 1,
-    # Only for evaluation runs, render the env.
-    "evaluation_config": {
-        "render_env": True,
-    },
-    'disable_env_checking': True,
 })
 
 
 print(f'Checkpoints Stored at {checkpoint_root}')
 
 print("Starting Trainer")
-algorithm = TRAINER.PPO(config=config)
+algorithm = TRAINER.PPO(config=config, env=ENV)
 print("Trainer Started")
 
 runTraining(algorithm, NUMBER_OF_EPOCHS,checkpoint_root, LAST_CHECKPOINT, SAVE_INTERVAL, RESULTS_INTERVAL, EVAL_INTERVAL)
+
 
 ray.shutdown()

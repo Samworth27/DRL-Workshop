@@ -1,5 +1,9 @@
+import base64
 import math
 import numpy as np
+import PIL
+from PIL import Image
+import base64
 
 def timeString(time):
     seconds_elapsed = math.floor(time)
@@ -39,3 +43,14 @@ def cleanDict(dictionary, config_type):
     for key, value in zip(dictionary.keys(), dictionary.values()):
         dictionary[key] = cleanValue(value, config_type)
     return dictionary
+
+def encodeArray(array):
+    shape = array.shape
+    buffer = bytes(array.astype("float64"))
+    encoded_string = base64.b64encode(buffer).decode("utf-8")
+    return encoded_string, shape
+
+def decodeArray(encoded_string, shape):
+    decoded_bytes = base64.b64decode(bytes(encoded_string, 'utf-8'))
+    array = np.frombuffer(decoded_bytes, "float64").reshape(shape)
+    return array
